@@ -12,6 +12,7 @@ import db.DataBase;
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.HttpRequest;
 import util.HttpRequestUtils;
 import util.IOUtils;
 
@@ -30,6 +31,9 @@ public class RequestHandler extends Thread {
         log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(), connection.getPort());
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
+            // TODO: refactor start line
+            //HttpRequest httpRequest = new HttpRequest(in);
+
             BufferedReader buffer = new BufferedReader(new InputStreamReader(in,"UTF-8"));
             String line = buffer.readLine();
             log.debug("request line : {}", line);
@@ -52,6 +56,8 @@ public class RequestHandler extends Thread {
             }
 
             String url = tokens[1].equals("/") ? "/index.html" : tokens[1];
+
+            // TODO: refactor end line
 
             if (url.equals("/user/create")) {
                 String readData = IOUtils.readData(buffer, contentLength);
@@ -83,7 +89,7 @@ public class RequestHandler extends Thread {
                 }
             }
             else if (url.equals("/user/list")) {
-                if ( !logined ) {
+                if ( logined ) {
                     responseResource(out, "/index.html");
                     return;
                 }
