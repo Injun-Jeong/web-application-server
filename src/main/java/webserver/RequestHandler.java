@@ -4,8 +4,6 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import db.DataBase;
@@ -13,8 +11,6 @@ import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequest;
-import util.HttpRequestUtils;
-import util.IOUtils;
 
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -33,10 +29,10 @@ public class RequestHandler extends Thread {
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
 
             HttpRequest httpRequest = new HttpRequest(in);
-            String url = httpRequest.getUrl();
+            String url = httpRequest.getPath();
 
             if (url.equals("/user/create")) {
-                User user = new User(httpRequest.getParam("userId"), httpRequest.getParam("password"), httpRequest.getParam("name"), httpRequest.getParam("email"));
+                User user = new User(httpRequest.getParameter("userId"), httpRequest.getParameter("password"), httpRequest.getParameter("name"), httpRequest.getParameter("email"));
 
                 log.debug("User: {}", user);
                 db.addUser(user);
@@ -45,8 +41,8 @@ public class RequestHandler extends Thread {
                 response302Header(dos, "/index.html");
             }
             else if (url.equals("/user/login")) {
-                String userId = httpRequest.getParam("userId");
-                String password = httpRequest.getParam("password");
+                String userId = httpRequest.getParameter("userId");
+                String password = httpRequest.getParameter("password");
 
                 Optional<User> getOptionalUser = db.findUserById(userId);
                 if ( getOptionalUser.isPresent() && getOptionalUser.get().getPassword().equals(password) ) {
@@ -88,17 +84,6 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private boolean isLogin(String line) {
-        String[] headerTokens = line.split(":");
-        Map<String, String> cookies = HttpRequestUtils.parseCookies(headerTokens[1].trim());
-        String value = cookies.get("logined");
-        if ( Objects.isNull(value) ) {
-            return false;
-        } else {
-            return Boolean.parseBoolean(value);
-        }
-    }
-
     private void responseResource(OutputStream out, String url) throws IOException {
         DataOutputStream dos = new DataOutputStream(out);
         byte[] body = Files.readAllBytes(new File("./webapp".concat(url)).toPath());
@@ -115,11 +100,6 @@ public class RequestHandler extends Thread {
         } catch (IOException e) {
             log.error(e.getMessage());
         }
-    }
-
-    private int getContentLength(String line) {
-        String[] headerTokens = line.split(":");
-        return Integer.parseInt(headerTokens[1].trim());
     }
 
     private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {

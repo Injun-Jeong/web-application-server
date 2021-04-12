@@ -1,0 +1,8 @@
+POST /uesr/create HTTP/1.1
+Host: localhost:8080
+connection: keep-alive
+content-Length: 46
+Content-Type: application/x-www.form-urlencoded
+Accept: */*
+
+userId=dhak45&password=123123&name=injun
