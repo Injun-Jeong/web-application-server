@@ -31,38 +31,12 @@ public class RequestHandler extends Thread {
         log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(), connection.getPort());
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
-            // TODO: refactor start line
-            //HttpRequest httpRequest = new HttpRequest(in);
 
-            BufferedReader buffer = new BufferedReader(new InputStreamReader(in,"UTF-8"));
-            String line = buffer.readLine();
-            log.debug("request line : {}", line);
-
-            if ( Objects.isNull(line) ) return;
-
-            String[] tokens = line.split(" ");
-            int contentLength = 0;
-            boolean logined = false;
-
-            while ( !line.isEmpty() ) {
-                log.debug("header: {}", line);
-                if ( line.contains("Content-Length")) {
-                    contentLength = getContentLength(line);
-                }
-                if ( line.contains("Cookie") ) {
-                    logined = isLogin(line);
-                }
-                line = buffer.readLine();
-            }
-
-            String url = tokens[1].equals("/") ? "/index.html" : tokens[1];
-
-            // TODO: refactor end line
+            HttpRequest httpRequest = new HttpRequest(in);
+            String url = httpRequest.getUrl();
 
             if (url.equals("/user/create")) {
-                String readData = IOUtils.readData(buffer, contentLength);
-                Map<String, String> params = HttpRequestUtils.parseQueryString(readData);
-                User user = new User(params.get("userId"), params.get("password"), params.get("name"), params.get("email"));
+                User user = new User(httpRequest.getParam("userId"), httpRequest.getParam("password"), httpRequest.getParam("name"), httpRequest.getParam("email"));
 
                 log.debug("User: {}", user);
                 db.addUser(user);
@@ -71,11 +45,8 @@ public class RequestHandler extends Thread {
                 response302Header(dos, "/index.html");
             }
             else if (url.equals("/user/login")) {
-                String readData = IOUtils.readData(buffer, contentLength);
-                Map<String, String> params = HttpRequestUtils.parseQueryString(readData);
-
-                String userId = params.get("userId");
-                String password = params.get("password");
+                String userId = httpRequest.getParam("userId");
+                String password = httpRequest.getParam("password");
 
                 Optional<User> getOptionalUser = db.findUserById(userId);
                 if ( getOptionalUser.isPresent() && getOptionalUser.get().getPassword().equals(password) ) {
@@ -89,7 +60,7 @@ public class RequestHandler extends Thread {
                 }
             }
             else if (url.equals("/user/list")) {
-                if ( logined ) {
+                if ( httpRequest.isLogined() ) {
                     responseResource(out, "/index.html");
                     return;
                 }
