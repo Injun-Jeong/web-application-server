@@ -10,14 +10,14 @@ import java.util.Objects;
 public class RequestLine {
     private static final Logger log = LoggerFactory.getLogger(RequestLine.class);
 
-    private final String httpMethod;
+    private final HttpMethod httpMethod;
     private Map<String, String> params;
     private String url;
 
     public RequestLine(String requestLine) {
         String[] tokens = requestLine.split(" ");
 
-        httpMethod = tokens[0];
+        httpMethod = HttpMethod.valueOf(tokens[0]);
         url = tokens[1].equals("/") ? "/index.html" : tokens[1];
 
         if ( url.contains("?") ) {
@@ -27,7 +27,7 @@ public class RequestLine {
         }
     }
 
-    public String getHttpMethod() {
+    public HttpMethod getHttpMethod() {
         return httpMethod;
     }
 

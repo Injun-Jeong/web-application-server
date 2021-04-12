@@ -14,8 +14,6 @@ public class HttpRequest {
     private InputStream in;
     boolean login;
     RequestLine requestLine;
-    String httpMethod;
-    String url;
     Map<String, String> header;
     Map<String, String> params;
 
@@ -40,20 +38,13 @@ public class HttpRequest {
 
             log.debug("■ 요청 메시지 분리 시작");
             requestLine = new RequestLine(line);
-            httpMethod = requestLine.getHttpMethod();
-            url = requestLine.getUrl();
 
             log.debug("■ 헤더 분리 시작");
-            int contentLength = 0;      // body의 크기
             line = buffer.readLine();
             while ( !Objects.isNull(line) && !line.isEmpty() ) {
                 log.debug("header: {}", line);
-                String[] headerTokens = getHeagerTokens(line);
+                String[] headerTokens = line.split(":");
                 header.put(headerTokens[0].trim(), headerTokens[1].trim());
-
-                if ( line.contains("Content-Length")) {
-                    contentLength = getContentLength(line);
-                }
                 if ( line.contains("Cookie") ) {
                     login = isLogin(line);
                 }
@@ -61,13 +52,12 @@ public class HttpRequest {
             }
 
             log.debug("■ 본문 분리 시작");
-            if ( httpMethod.equals("POST") ) {
-                String readData = IOUtils.readData(buffer, contentLength);
+            if ( requestLine.getHttpMethod().isPost() ) {
+                String readData = IOUtils.readData(buffer, Integer.parseInt(getHeader("Content-Length")));
                 params = HttpRequestUtils.parseQueryString(readData.trim());
-            } else if ( httpMethod.equals("GET") ) {
+            } else if ( requestLine.getHttpMethod().isGet() ) {
                 params = requestLine.getParams();
             }
-
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -75,13 +65,9 @@ public class HttpRequest {
         }
     }
 
-    private int getContentLength(String line) {
-        String[] headerTokens = getHeagerTokens(line);
-        return Integer.parseInt(headerTokens[1].trim());
-    }
 
     private boolean isLogin(String line) {
-        String[] headerTokens = getHeagerTokens(line);
+        String[] headerTokens = line.split(":");
         Map<String, String> cookies = HttpRequestUtils.parseCookies(headerTokens[1].trim());
         String value = cookies.get("logined");
         if ( Objects.isNull(value) ) {
@@ -91,20 +77,16 @@ public class HttpRequest {
         }
     }
 
-    private String[] getHeagerTokens(String line) {
-        return line.split(":");
-    }
-
 
     /**
      * Getter
      */
-    public String getMethod() {
-        return httpMethod;
+    public HttpMethod getMethod() {
+        return requestLine.getHttpMethod();
     }
 
     public String getPath() {
-        return url;
+        return requestLine.getUrl();
     }
 
     public boolean isLogined() {
